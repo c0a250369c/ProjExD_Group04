@@ -2,6 +2,7 @@ import pygame as pg
 import random #ランダム機能を使うために使用
 import os #ファイルやフォルダを操作するためのライブラリ
 import sys #Python事態を操作するためのライブラリ
+import time
 
 WIDTH = 800 #以下2行色
 HEIGHT = 600
@@ -90,12 +91,14 @@ class Hand: # 手札を管理する部分
 
 class Message: # ゲーム結果のメッセージを管理するクラス
     def __init__(self):
-        self.font = pg.font.SysFont("msgothic", 30) # フォントとサイズを決定
-        self.text = "" # 表示する文字を空にする
+        self.font = None
+        self.text = ""
 
-    def update(self,screen): # 画面にメッセージを表示する
-        img = self.font.render(self.text, True, WHITE) # 文字を画像に変換
-        screen.blit(img,(50,520)) # 画面へ貼り付ける
+    def update(self,screen):
+        if self.font is None:
+            self.font = pg.font.SysFont("msgothic", 30)
+        img = self.font.render(self.text, True, WHITE)
+        screen.blit(img,(50,520))
 
 class Gmo:# ゲームオーバー画面＆コンティニューボタン
     def __init__(self):
@@ -128,6 +131,20 @@ def new_game(): # 新しゲームを作る関数
         game_over = True # ゲームを終了する
     return deck, player, dealer, message, game_over # 結果を返す
 
+class Burakkujakku_gamen:
+
+    def burakkujakku_gamen(self, screen: pg.Surface) -> None:
+        go_img = pg.Surface((WIDTH, HEIGHT))
+        pg.draw.rect(go_img, (0, 0, 0), pg.Rect(0, 0, WIDTH, HEIGHT))
+        go_img.set_alpha(180)
+        go_img.fill((0, 0, 0))
+        
+        fonto = pg.font.Font(None, 80)
+        txt = fonto.render("Black Jack", True, (255, 255, 255))
+        go_img.blit(txt, [WIDTH // 2 -150, HEIGHT // 2 - 40])
+
+        screen.blit(go_img, [0, 0])
+
 
 def main(): # 実行文
     screen = pg.display.set_mode((WIDTH,HEIGHT)) # 画面を作成
@@ -144,8 +161,12 @@ def main(): # 実行文
         result_timer = 0 #タイマーを0にする
 
     while True:
-        for event in pg.event.get(): # プレイヤーの操作を確認
-            if event.type == pg.QUIT: # ×ボタンが押されたか確認
+        
+        if game_over and result_timer == 0:
+            result_timer = pg.time.get_ticks()
+
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
                 return
 
             if event.type == pg.KEYDOWN and not game_over: # キーボ－ドが押された、ゲーム内である場合に処理
@@ -178,16 +199,23 @@ def main(): # 実行文
                     deck, player, dealer, message, game_over = new_game()
                     is_gameover_screen = False # ゲームオーバー状態をリセット
 
-        screen.fill(GREEN) # 画面全体を緑色にする
-        dealer.draw_dealer(screen, font, 50, 80, not game_over) # ディーラーカードの表示(画面、フォント、横、縦、隠すかどうか)、ゲーム中は1枚目をかえす
-        player.draw(screen, font, 50, 320) # プレイヤーカードの表示
-        message.update(screen) # メッセージの表示
-        ## 仮条件 ##
+        screen.fill(GREEN)
+        dealer.draw_dealer(screen, font, 50, 80, not game_over)
+        player.draw(screen, font, 50, 320)
+        message.update(screen)
+
+        if player.total() == 21 and len(player.cards) == 2:
+            bg = Burakkujakku_gamen()
+            bg.burakkujakku_gamen(screen)
+
+        pg.display.update()
+
         if is_gameover_screen: #ここはチップが完成したラ修正する
             gmo.gamen(screen) #画像表示
         elif game_over:# 2秒後に新しいゲーム開始
-            if pg.time.get_ticks() - result_timer > 2000: # 終了してから2行以上たったか確認
-                deck, player, dealer, message, game_over = new_game() # 新しくゲームの開始
+            if pg.time.get_ticks() - result_timer > 2000:
+                deck, player, dealer, message, game_over = new_game()
+                result_timer = 0
 
         pg.display.update() #画面の表示更新
         clock.tick(60) # 1秒間に最大60回処理する,コンピュータによって処理速度が変わる
